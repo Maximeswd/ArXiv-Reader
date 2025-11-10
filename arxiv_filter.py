@@ -5,7 +5,7 @@ from rich.style import Style
 from rich import box
 import argparse
 
-from util import add_to_table, get_until
+from utils import add_to_table, get_until
 
 console = Console()
 
@@ -16,13 +16,9 @@ args = parser.parse_args()
 
 with console.status('Reading papers...', spinner='monkey'):
     # SETUP
-    # If you provides any command-line argument (-k or -a), we will ONLY use that
-    # The .txt files will be ignored.
     if args.keyword or args.author:
         console.print("[yellow]Command-line arguments detected. Ignoring .txt files.[/yellow]")
-        # Use the provided keyword(s), or an empty list if none were given
         keywords = args.keyword if args.keyword else []
-        # Use the provided author(s), or an empty list if none were given
         authors = args.author if args.author else []
     else:
         ValueError("No command-line arguments provided. Please provide keywords or authors to search for in the format: -k 'keyword' and/or -a 'author1'.")

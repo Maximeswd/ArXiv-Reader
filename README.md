@@ -1,24 +1,27 @@
-# Live arXiv Paper Filter
+# ArXiv Paper Scraper
 
-This is a command-line tool to fetch and filter the latest papers directly from the arXiv API, providing up-to-the-minute results in your terminal.
+This project provides an easy-to-use command-line tool to search, fetch, and filter academic papers directly from arXiv in your terminal.
 
-This version is a complete, API-driven tool that offers significant enhancements for a streamlined workflow:
-1.  **Live API Fetching:** The primary method fetches data directly from the official arXiv API, ensuring you get the latest papers the moment they are available.
-2.  **Smart Default Categories:** By default, the tool automatically searches within the core AI/ML categories (`cs.LG`, `cs.CL`, `cs.CV`, `cs.AI`, `cs.IR`).
-3.  **Interactive Arguments:** Use command-line flags to search for keywords, authors, and to override the default categories on the fly. Includes a precise "whole-word" search option for acronyms.
-4.  **Powerful Terminal Command:** A simple Zsh function (`arxiv`) provides a seamless interface to the tool.
-5.  **Optional Email/File Parsing:** For offline use, a secondary script and workflow are provided, based on the logic from a separate open-source project.
+The primary tool, `arxiv`, operates in two distinct modes: a **general search** mode for querying the entire historical arXiv database, and a **daily digest** mode for scraping and filtering the very latest papers.
 
-_Example of the terminal output after running the filter for "LLM", with custom colors._
-![Image](img/llm_example.png)
+It features intelligent, relevance-based sorting and smart highlighting to make staying on top of new research effortless.
+
+_A side-by-side comparison of the General Search (`-g`) and Daily Digest (`-d`) modes._
+
+| General Search (`-g`) Example                | Daily Digest (`-d`) Example                    |
+| :-------------------------------------------: | :---------------------------------------------: |
+| <img src="img/g_example.png" width="400"> | <img src="img/d_example.png" width="400"> |
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
-- [Installation and Setup (Primary Workflow)](#installation-and-setup-primary-workflow)
-- [Usage of the Main `arxiv` Command](#usage-of-the-main-arxiv-command)
-- [Optional Workflow: Parsing Local Emails (macOS)](#optional-workflow-parsing-local-emails-macos)
+- [Installation and Setup](#installation-and-setup)
+- [Usage: The Unified `arxiv` Command](#usage-the-unified-arxiv-command)
+  - [Mode 1: General Search (`-g`)](#mode-1-general-search--g)
+  - [Mode 2: Daily Digest (`-d`)](#mode-2-daily-digest--d)
+- [Optional Workflow: Local Email Parsing (macOS)](#optional-workflow-local-email-parsing-macos)
 - [Key Files](#key-files)
+- [Acknowledgements](#acknowledgements)
 - [Contributing](#contributing)
 - [Disclaimer](#disclaimer)
 
@@ -27,202 +30,198 @@ _Example of the terminal output after running the filter for "LLM", with custom 
 - **Python 3** installed.
 - For the optional email workflow on Mac: The native **Apple Mail** app.
 
-## Installation and Setup (Primary Workflow)
+## Installation and Setup
 
-This setup is for the main, API-driven tool.
+This single setup process will configure the `arxiv` command and all its features.
 
-### Step 1: Clone the Repository
-
-```bash
-git clone <repository_url>
-cd <repository_folder_name>
-```
-
-### Step 2: Set Up Python Environment
+### Step 1: Clone the Repository and Set Up Environment
 
 ```bash
-# Create a virtual environment
+# Clone this repository
+git clone https://github.com/your-username/ArXiv-Reader.git
+cd ArXiv-Reader
+
+# Create and activate a Python virtual environment
 python3 -m venv .venv
-
-# Activate it
 source .venv/bin/activate
 
 # Install the required packages
 pip install -r requirements.txt
 ```
+> ⚡ **Pro Tip:** For faster installation, consider using `uv` (`pip install uv`, then `uv pip install -r requirements.txt`).
 
-> ⚡ **Pro Tip: Faster Installation with `uv`**
-> For a significantly faster installation, you can use `uv`, a next-generation Python package installer. First, install it (`pip install uv`), then use `uv pip install -r requirements.txt`.
+### Step 2: Create the `arxiv` Terminal Command
 
-### Step 3: Create the Terminal Command (Zsh Function)
-
-This function will create the main `arxiv` command in your terminal.
+This step creates a convenient `arxiv` command that you can run from anywhere in your terminal.
 
 1.  Open your Zsh configuration file:
     ```bash
     open ~/.zshrc
     ```
-2.  Add the following function to the end of the file. **Remember to replace `/path/to/your/ArXiv-Reader` with your actual project path.**
+    2.  Add the following function to the end of the file. **Remember to replace `/path/to/your/ArXiv-Reader` with the absolute path to where you cloned the project.**
 
-    ```bash
-    # Function to fetch live data from arXiv API and filter it
+    ```zsh
+    # ===== ArXiv Reader Tool =====
+    # A powerful function to search arXiv from the command line.
+    # Mode must be specified first: -g (general) or -d (daily).
     arxiv() {
-      # Activate venv and run the CLI script, passing all arguments
+      # Validate that a mode flag is provided first.
+      if [[ "$1" != "-g" && "$1" != "-d" ]]; then
+        echo -e "\n\x1b[1;31mError:\x1b[0m You must specify a mode as the first argument."
+        echo -e "  \x1b[1;34m-g\x1b[0m : General Search (entire database)"
+        echo -e "  \x1b[1;32m-d\x1b[0m : Daily Digest (today's papers)"
+        echo -e "\n\x1b[33mExample:\x1b[0m arxiv -d -k transformer -c cs.CV --max 5\n"
+        return 1
+      fi
+
+      # Activate venv, run the script with all arguments, then deactivate.
       source /path/to/your/ArXiv-Reader/.venv/bin/activate
       python /path/to/your/ArXiv-Reader/arxiv_cli.py "$@"
+      deactivate
     }
     ```
-3.  Save the `.zshrc` file and reload your terminal session:
+3.  Save the `.zshrc` file and reload your terminal session to activate the command:
     ```bash
     source ~/.zshrc
     ```
 
-## Usage of the Main `arxiv` Command
+## Usage: The Unified `arxiv` Command
 
-The `arxiv` command fetches and filters the latest papers directly from the arXiv API. By default, it searches the latest papers in the core AI categories: **Machine Learning (`cs.LG`), Computation and Language (`cs.CL`), Computer Vision (`cs.CV`), Artificial Intelligence (`cs.AI`), and Information Retrieval (`cs.IR`).**
+The `arxiv` command is your single entry point. The first argument you provide **must** be the mode: `-g` for a general search or `-d` for the daily digest.
 
-### Advanced Search (using command-line arguments)
+> **A Note on Highlighting:** The tool automatically highlights individual words from your `-k` (keyword) and `-a` (author) queries. It splits phrases (like `"Attention is all you need"`) and only highlights **whole word matches** in the output for clarity.
 
-**Filter by Keyword(s):**
+> **A Note on Relevance Sorting:** To ensure the most important papers appear first, results are sorted by relevance when keywords are used.
+> - **Daily Mode (`-d`):** Results are sorted by a custom relevance score. This score is calculated from the normalized frequency (keyword count / total words) of your keywords, with the score from the **title given 3x more weight** than matches in the abstract.
+> - **General Mode (`-g`):** Results are sorted using the arXiv API's powerful, built-in relevance engine, which is highly optimized for academic papers.
+
+---
+
+### Mode 1: General Search (`-g`)
+
+This mode uses the official arXiv API to search the **entire historical database**. It is perfect for finding foundational papers or researching a topic across any time period.
+
+#### **Key Features:**
+-   **Relevance Sorting:** Automatically sorts results by relevance when using keywords, ensuring the most important papers appear first.
+-   **Date Filtering:** Search for papers submitted within a specific date range.
+-   **Comprehensive Search:** Query by keyword, author, category, or any combination.
+-   **High Volume:** Fetch up to 2,000 results in a single query with the `--all` flag.
+
+#### **Examples:**
+
+**Search by keyword to find a specific paper:**
 ```bash
-# Find papers with the phrase "large language models" in the default categories
-arxiv -k "large language models"
-
-# Use -w for a precise, whole-word search (perfect for acronyms)
-arxiv -k "RAG" -w
+# Finds the original "Attention Is All You Need" paper, sorted to the top
+arxiv -g -k "Attention is all you need" --max 5
 ```
 
-**Filter by Author(s):**
+**Find all papers by an author within a date range:**
 ```bash
-# Find papers by "Yann LeCun" in the default categories
-arxiv -a "Yann LeCun"
+# Find papers by "Yann LeCun" submitted in 2025
+arxiv -g -a "Yann LeCun" --start-date 2025-01-01 --end-date 2025-12-31
 ```
 
-**Override the Default Categories:**
-Use the `-c` flag to search within specific CS sub-fields instead of the default list.
-```bash
-# Search for "transformer" only in Robotics (cs.RO)
-arxiv -c cs.RO -k "transformer"
+---
 
-# Search across all of Computer Science
-arxiv -c cs.* -k "attention"
+### Mode 2: Daily Digest (`-d`)
+
+This mode scrapes the live `cs/new` webpage to give you an up-to-the-minute view of **today's latest computer science papers**. It is designed for quickly filtering the daily firehose of new research.
+
+#### **Key Features:**
+-   **Real-Time:** Gets the absolute newest papers as they are listed.
+-   **Relevance Sorting:** Automatically ranks papers by keyword density, showing the most relevant results first.
+-   **Smart Filtering:** Filters by keyword (in title/abstract), author, and specific CS categories.
+-   **Baseline Categories:** If you don't specify `-c`, it automatically uses a baseline: **`cs.CV`, `cs.LG`, `cs.CL`, `cs.AI`, and `cs.IR`**.
+-   **Broad Search:** Use `-c cs.*` to include *all* computer science categories.
+-   **Fetch All:** Use the `--all` flag to get every matching paper from the day's listings.
+
+#### **Examples:**
+
+**Search for a keyword using the baseline categories:**
+```bash
+# Finds today's papers on "llm" in key AI fields, sorted by relevance
+arxiv -d -k "llm"
 ```
 
-**Control the Number of Results:**
-The `--max` flag controls how many of the latest papers to fetch (default is 2000).
+**Get ALL of today's papers by an author across ALL CS fields:**
 ```bash
-# Search for "GAN" within the latest 50 papers from cs.CV
-arxiv -c cs.CV --max 50 -k "GAN" -w
+# See if "Geoffrey Hinton" published anything new today in any CS field
+arxiv -d -c cs.* -a "Geoffrey Hinton" --all
 ```
 
-## Optional Workflow: Parsing Local Emails (macOS)
+> **Note:** Use the `--max` flag to limit the number of results, or use the `--all` flag to retrieve all matching papers from the daily page.
 
-This secondary workflow is for users who prefer to automate fetching from their local Apple Mail app instead of the live API.
+## Optional Workflow: Local Email Parsing (macOS)
 
-> **Citation:** This local email parsing workflow is based on the original work by **ege-erdogan**. The original repository can be found at: [https://github.com/ege-erdogan/yet-another-arxiv-filter](https://github.com/ege-erdogan/yet-another-arxiv-filter).
+This secondary workflow is for users who prefer to work offline by parsing the daily arXiv email digest that has been downloaded to their local Apple Mail app.
 
 ### Step 1: Subscribe to arXiv Daily Emails
 
-First, ensure you are receiving the daily arXiv emails by sending a **plain text** email:
+Ensure you are subscribed to receive the daily arXiv emails. You can find instructions on the [arXiv help page](https://info.arxiv.org/help/subscribe.html).
 
-- **To:** `cs@arXiv.org`
-- **Subject:** `subscribe <Your Full Name>`
-- **Body:** Add subject classes, one per line (e.g., `add Machine Learning`).
+### Step 2: Create the Email Fetch Script (`fetch_arxiv.scpt`)
 
-```bash
-add Machine Learning
-add Computation and Language
-add Computer Vision and Pattern Recognition
-add Artificial Intelligence
-add Information Retrieval
-```
-> You can find the full subscription information [https://info.arxiv.org/help/subscribe.html][here]
-
-
-
-### Step 2: Create the Email Fetch Script (AppleScript)
-
-This script tells your Mail app to save the latest arXiv email to a file.
+This AppleScript tells your Mail app to find the latest arXiv email and save its content to a text file.
 
 1.  Open the **Script Editor** app on your Mac.
 2.  Paste the following code, **editing the `outputPath`** to point to a `mail_text.txt` file inside your project folder.
 
     ```applescript
-    -- This path is personalized for your setup.
     set outputPath to "/path/to/your/ArXiv-Reader/mail_text.txt"
-
-    -- Tell the Mail application to do the following:
     tell application "Mail"
-        -- Search for messages from "noreply@arxiv.org" with "cs daily" in the subject
         set theMessages to (messages of inbox whose sender is "noreply@arxiv.org" and subject contains "cs daily")
-        
-        -- Check if any messages were found
-        if (count of theMessages) is 0 then
-            return "No new arXiv email found."
-        end if
-        
-        -- Get the very last message in the list (the most recent one)
-        set theMessage to the last item of theMessages
-        
-        -- Get the plain text content of that message
-        set theContent to the content of theMessage
-        
-        -- Write the content to the output file
-        try
+        if (count of theMessages) > 0 then
+            set theMessage to the last item of theMessages
+            set theContent to the content of theMessage
             set theFile to open for access file outputPath with write permission
-            set eof of theFile to 0 -- This clears the file before writing
+            set eof of theFile to 0
             write theContent to theFile starting at eof
             close access theFile
-            return "Successfully saved arXiv email to mail_text.txt"
-        on error
-            close access file outputPath
-            return "Error writing to file."
-        end try
+        end if
     end tell
     ```
 3.  Save the script inside your project folder as `fetch_arxiv.scpt`.
 
-### Step 3: Create the Email Terminal Command
+### Step 3: Create and Use an `arxiv-mail` Command
 
-1.  Open your Zsh configuration file (`open ~/.zshrc`).
-2.  Add this second function to the end of the file, again **replacing the paths with your own**.
-
-    ```bash
-    # Optional function to parse the latest email from the Apple Mail app
-    arxiv_mail() {
+1.  Add this additional function to your `~/.zshrc` file:
+    ```zsh
+    # Optional: Parse the latest arXiv email from the Apple Mail app
+    arxiv-mail() {
       source /path/to/your/ArXiv-Reader/.venv/bin/activate
       cd /path/to/your/ArXiv-Reader
-      # Fetch the email first
+      # Run the AppleScript to fetch the email content
       osascript fetch_arxiv.scpt >/dev/null 2>&1
-      # Then parse the resulting file, passing along all arguments
-      python arxiv_filter.py "$@"
+      # Run the Python filter script on the output file
+      python arxiv_filter.py mail_text.txt "$@"
     }
     ```
-3.  Reload your terminal: `source ~/.zshrc`.
+2.  Reload your terminal with `source ~/.zshrc`.
+3.  Sync your Mail app, then run the command:
+    ```bash
+    # Search for a keyword in your latest email
+    arxiv-mail -k "transformer"
 
-### Step 4: Usage of `arxiv_mail` Command
-
-This command requires you to provide arguments.
-```bash
-# Search for a keyword in your latest email
-arxiv_mail -k "transformer"
-
-# Search for an author in your latest email
-arxiv_mail -a "Geoffrey Hinton"
-```
+    # Search for an author in your latest email
+    arxiv-mail -a "Geoffrey Hinton"
+    ```
 
 ## Key Files
 
--   **`arxiv_cli.py`**: The **main, primary** tool that fetches live data from the arXiv API.
--   **`util.py`**: A helper script for styling the terminal output.
--   **`requirements.txt`**: Lists all necessary Python packages for the project.
--   **`keywords.txt` / `authors.txt`**: Your default search terms for the `arxiv` command when run without arguments.
--   **`arxiv_parser.py`**: A **secondary, optional** script for parsing local text files.
+-   **`arxiv_cli.py`**: The core, unified script that powers the `arxiv` command and both its `-g` and `-d` modes.
+-   **`util.py`**: A helper script for styling and highlighting the terminal output.
+-   **`requirements.txt`**: Lists all necessary Python packages.
+-   **`arxiv_filter.py`**: (For email workflow) A script for parsing local text files.
+-   **`fetch_arxiv.scpt`**: (For email workflow) The AppleScript to extract email content.
+
+## Acknowledgements
+
+The local file parsing logic in `arxiv_filter.py` is based on the original work by **ege-erdogan**. The original repository can be found at: [https://github.com/ege-erdogan/yet-another-arxiv-filter](https://github.com/ege-erdogan/yet-another-arxiv-filter).
 
 ## Contributing
 
-Any feedback is welcome.
+Feedback and contributions are welcome. Please feel free to open an issue or submit a pull request.
 
 ## Disclaimer
 
-The author(s) of this repository are not responsible for any potential loss of career opportunities due to missed arXiv papers. Use at your own risk.
+This tool is provided in the hope of taming the arXiv firehose, but with no guarantee of success. The author is not liable for any missed papers, scooped research, or the resulting academic existential dread. Use at your own risk. 
