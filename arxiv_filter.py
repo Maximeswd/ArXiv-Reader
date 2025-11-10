@@ -24,17 +24,8 @@ with console.status('Reading papers...', spinner='monkey'):
         keywords = args.keyword if args.keyword else []
         # Use the provided author(s), or an empty list if none were given
         authors = args.author if args.author else []
-    
-    # If NO command-line arguments are given, fall back to the .txt files.
     else:
-        console.print("[yellow]No command-line arguments. Using keywords.txt and authors.txt.[/yellow]")
-        with open('keywords.txt', 'r') as file:
-            keywords = file.read().splitlines()
-            keywords = [keyword for keyword in keywords if len(keyword) > 2]
-
-        with open('authors.txt', 'r') as file:
-            authors = file.read().splitlines()
-            authors = [author for author in authors if len(author) > 2]
+        ValueError("No command-line arguments provided. Please provide keywords or authors to search for in the format: -k 'keyword' and/or -a 'author1'.")
     
     with open('mail_text.txt', 'r') as file:
         lines = file.readlines()
