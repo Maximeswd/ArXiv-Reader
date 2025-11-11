@@ -263,7 +263,7 @@ This AppleScript tells your Mail app to find the latest arXiv email and save its
 
 ## Acknowledgements
 
-The local file parsing logic in `arxiv_filter.py` is based on the original work by **ege-erdogan**. The original repository can be found at: [https://github.com/ege-erdogan/yet-another-arxiv-filter](https://github.com/ege-erdogan/yet-another-arxiv-filter).
+The local email file parsing logic is based on the original work by **ege-erdogan**. The original repository can be found at: [https://github.com/ege-erdogan/yet-another-arxiv-filter](https://github.com/ege-erdogan/yet-another-arxiv-filter).
 
 ## Contributing
 
