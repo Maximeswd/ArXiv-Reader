@@ -165,43 +165,92 @@ This AppleScript tells your Mail app to find the latest arXiv email and save its
 2.  Paste the following code, **editing the `outputPath`** to point to a `mail_text.txt` file inside your project folder.
 
     ```applescript
-    set outputPath to "/path/to/your/ArXiv-Reader/mail_text.txt"
+    set outputPath to "path/to/your/ArXiv-Reader/mail_text.txt"
+    set targetAccountName to "<mail account description name>"
+    set targetMailboxName to "<inbox name> (e.g., INBOX)"
+
+    set emailContent to ""
+
     tell application "Mail"
-        set theMessages to (messages of inbox whose sender is "noreply@arxiv.org" and subject contains "cs daily")
-        if (count of theMessages) > 0 then
-            set theMessage to the last item of theMessages
-            set theContent to the content of theMessage
-            set theFile to open for access file outputPath with write permission
-            set eof of theFile to 0
-            write theContent to theFile starting at eof
-            close access theFile
+      try
+        if not (account targetAccountName exists) then
+          display dialog "Error: The account with Description '" & targetAccountName & "' was not found." with icon stop
+          return
         end if
+        
+        set theMessages to (messages of mailbox targetMailboxName of account targetAccountName whose sender contains "no-reply@arXiv.org" and subject contains "cs daily")
+        
+        if (count of theMessages) > 0 then
+          set emailContent to content of the last item of theMessages
+        end if
+        
+      on error errMsg
+        display dialog "An error occurred inside the Mail app: " & errMsg with icon stop
+        return
+      end try
     end tell
+
+    if emailContent is "" then
+      display dialog "No arXiv email was found that matched the filter criteria." with icon note
+      return
+    end if
+
+    try
+      set theFile to open for access (POSIX file outputPath) with write permission
+      set eof of theFile to 0
+      
+      
+      write emailContent to theFile as «class utf8»
+      
+      close access theFile
+    on error errMsg
+      display dialog "A file writing error occurred: " & errMsg with icon stop
+    end try
     ```
 3.  Save the script inside your project folder as `fetch_arxiv.scpt`.
 
-### Step 3: Create and Use an `arxiv-mail` Command
+### Step 3: Add and use the -m mode
 
 1.  Add this additional function to your `~/.zshrc` file:
     ```zsh
-    # Optional: Parse the latest arXiv email from the Apple Mail app
-    arxiv-mail() {
-      source /path/to/your/ArXiv-Reader/.venv/bin/activate
-      cd /path/to/your/ArXiv-Reader
-      # Run the AppleScript to fetch the email content
-      osascript fetch_arxiv.scpt >/dev/null 2>&1
-      # Run the Python filter script on the output file
-      python arxiv_filter.py mail_text.txt "$@"
+    # ===== ArXiv Scraper Tool =====
+    # Mode must be specified first: -g (general), -d (daily), or -m (mail).
+    arxiv() {
+      # Validate that a mode flag is provided first.
+      if [[ "$1" != "-g" && "$1" != "-d" && "$1" != "-m" ]]; then
+        echo -e "\n\x1b[1;31mError:\x1b[0m You must specify a mode as the first argument."
+        echo -e "  \x1b[1;34m-g\x1b[0m : General Search (entire database)"
+        echo -e "  \x1b[1;32m-d\x1b[0m : Daily Digest (scrape website)"
+        echo -e "  \x1b[1;35m-m\x1b[0m : Mail Parser (macOS Apple Mail)"
+        echo -e "\n\x1b[33mExample:\x1b[0m arxiv -d -k transformer\n"
+        return 1
+      fi
+
+      # Use a subshell to keep the main shell environment clean
+      (
+        cd "/path/to/your/ArXiv-Scraper" || { echo "Error: Project directory not found."; return 1; }
+        
+        source .venv/bin/activate
+        
+        # If mail mode is selected, run the AppleScript first
+        if [[ "$1" == "-m" ]]; then
+          echo "Fetching latest arXiv email from Apple Mail..."
+          osascript fetch_arxiv.scpt
+        fi
+        
+        # Run the single, unified Python script with all original arguments
+        python arxiv_cli.py "$@"
+      )
     }
     ```
 2.  Reload your terminal with `source ~/.zshrc`.
 3.  Sync your Mail app, then run the command:
     ```bash
     # Search for a keyword in your latest email
-    arxiv-mail -k "transformer"
+    arxiv -m -k "transformer"
 
     # Search for an author in your latest email
-    arxiv-mail -a "Geoffrey Hinton"
+    arxiv -m -a "Geoffrey Hinton"
     ```
 
 ## Key Files

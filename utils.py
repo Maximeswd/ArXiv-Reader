@@ -1,5 +1,7 @@
+# util.py (Final version with conditional subjects)
 from rich.style import Style
 from rich.text import Text
+import pandas as pd  # Import pandas
 import re
 
 ACTIVE_THEME = "nordic"
@@ -43,19 +45,7 @@ def clean_abstract(abstract):
     return abstract.strip() if isinstance(abstract, str) else ""
 
 
-def get_until(i, lines, delim, n_skip=0):
-    text = lines[i][n_skip:].strip() + " "
-    i += 1
-    try:
-        while not lines[i].startswith(delim):
-            text += lines[i].strip() + " "
-            i += 1
-    except IndexError:
-        return text
-    return text
-
-
-def add_to_table(df, table, keywords_to_highlight):
+def add_to_table(df, table, keywords_to_highlight, show_subjects=True):
     try:
         colors = THEMES[ACTIVE_THEME]
     except KeyError:
@@ -72,14 +62,12 @@ def add_to_table(df, table, keywords_to_highlight):
     for _, row in df.iterrows():
         title_text = Text(row.get("title", ""))
         authors_text = Text(row.get("authors", ""))
-        subjects_text = Text(row.get("subjects", "No subjects found"))
         abstract_text = Text(clean_abstract(row.get("abstract", "")))
 
         if keywords_to_highlight:
             for keyword in keywords_to_highlight:
                 if isinstance(keyword, str):
                     highlight_regex = f"(?i)\\b({re.escape(keyword)})\\b"
-
                     title_text.highlight_regex(highlight_regex, style=highlight_style)
                     abstract_text.highlight_regex(
                         highlight_regex, style=highlight_style
@@ -88,8 +76,11 @@ def add_to_table(df, table, keywords_to_highlight):
 
         table.add_row("", title_text, style=title_style)
         table.add_row("", authors_text, style=author_style)
+        if show_subjects and "subjects" in row and pd.notna(row["subjects"]):
+            subjects_text = Text(row.get("subjects"))
+            table.add_row("", subjects_text, style=subject_style)
         table.add_row("", row.get("url", ""), style=link_style)
-        table.add_row("", subjects_text, style=subject_style)
         table.add_row("", abstract_text, style=abstract_style)
         table.add_row("")
+
     return table
