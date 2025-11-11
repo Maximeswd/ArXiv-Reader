@@ -26,7 +26,7 @@ _A side-by-side comparison of the General Search (`-g`) and Daily Digest (`-d`) 
 ## Prerequisites
 
 - **Python 3** installed.
-- For the optional email workflow on Mac: The native **Apple Mail** app.
+- For the email workflow (`-m mode`): **macOS** with the native **Apple Mail app**.
 
 ## Installation and Setup
 
@@ -92,6 +92,22 @@ The `arxiv` command is your single entry point. The first argument you provide *
 > **A Note on Relevance Sorting:** To ensure the most important papers appear first, results are sorted by relevance when keywords are used.
 > - **Daily Mode (`-d`):** Results are sorted by a custom relevance score. This score is calculated from the normalized frequency (keyword count / total words) of your keywords, with the score from the **title given 2x more weight** than matches in the abstract.
 > - **General Mode (`-g`):** Results are sorted using the arXiv API's powerful, built-in relevance engine, which is highly optimized for academic papers.
+
+
+## A Note for macOS Users: Use iTerm2
+
+For the best visual experience and full functionality, it is **highly recommended** to use [iTerm2](https://iterm2.com/) instead of the default `Terminal.app` on macOS.
+
+The built-in Terminal app is outdated and does not support modern features like true hyperlinks or clean underline rendering. This can result in:
+-   Needing to `Cmd + Double Click` links instead of a simple `Cmd + Single Click`.
+-   Visual glitches where underlines stretch across the screen or bleed onto other lines.
+
+**iTerm2 is a free, modern terminal that solves all these issues.** The `arxiv` command will work exactly the same, but the output will look better and the links will be single-clickable.
+
+**Installation is simple with Homebrew:**
+```bash
+brew install --cask iterm2
+```
 
 ---
 
@@ -255,10 +271,9 @@ This AppleScript tells your Mail app to find the latest arXiv email and save its
 
 ## Key Files
 
--   **`arxiv_cli.py`**: The core, unified script that powers the `arxiv` command and both its `-g` and `-d` modes.
+-   **`arxiv_cli.py`**: The core, unified script that powers the `arxiv` command and both its `-g`, `-d`, and `-m` modes.
 -   **`utils.py`**: A helper script for styling and highlighting the terminal output. Here you can choose various themes or make a custom one.
 -   **`requirements.txt`**: Lists all necessary Python packages.
--   **`arxiv_filter.py`**: (For email workflow) A script for parsing local text files.
 -   **`fetch_arxiv.scpt`**: (For email workflow) The AppleScript to extract email content.
 
 ## Acknowledgements

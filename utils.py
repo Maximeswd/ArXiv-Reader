@@ -1,7 +1,6 @@
-# util.py (Final version with conditional subjects)
 from rich.style import Style
 from rich.text import Text
-import pandas as pd  # Import pandas
+import pandas as pd
 import re
 
 ACTIVE_THEME = "nordic"
@@ -79,7 +78,9 @@ def add_to_table(df, table, keywords_to_highlight, show_subjects=True):
         if show_subjects and "subjects" in row and pd.notna(row["subjects"]):
             subjects_text = Text(row.get("subjects"))
             table.add_row("", subjects_text, style=subject_style)
-        table.add_row("", row.get("url", ""), style=link_style)
+        url = row.get("url", "")
+        link_markup = f"[link={url}]{url}[/link]"
+        table.add_row("", link_markup, style=link_style)
         table.add_row("", abstract_text, style=abstract_style)
         table.add_row("")
 

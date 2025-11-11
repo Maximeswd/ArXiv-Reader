@@ -16,7 +16,6 @@ from utils import add_to_table
 console = Console()
 MAIL_FILE = "mail_text.txt"
 
-
 def config():
     """Sets up and parses command-line arguments for all modes."""
     parser = argparse.ArgumentParser(
@@ -90,16 +89,20 @@ def search_general_api(
     base_url = "http://export.arxiv.org/api/query?"
     query_parts = []
     sort_by = "relevance" if keywords else "submittedDate"
+    
     if categories:
         cat_query = "+OR+".join([f"cat:{cat}" for cat in categories])
         query_parts.append(f"({cat_query})")
+    
     if keywords:
         processed_keywords = [f'"{kw}"' if " " in kw else kw for kw in keywords]
         for kw in processed_keywords:
             query_parts.append(f"(ti:{kw} OR abs:{kw})")
+    
     if authors:
         for au in authors:
             query_parts.append(f'au:"{au}"')
+    
     if start_date or end_date:
         try:
             start = (
@@ -113,10 +116,13 @@ def search_general_api(
                 else datetime.now().strftime("%Y%m%d%H%M%S")
             )
             query_parts.append(f"submittedDate:[{start} TO {end}]")
+        
         except ValueError:
             return pd.DataFrame()
+    
     if not query_parts:
         return pd.DataFrame()
+    
     search_query = "+AND+".join(query_parts)
     full_query = f"{base_url}search_query={search_query}&sortBy={sort_by}&sortOrder=descending&max_results={max_results}"
     with console.status(
@@ -133,6 +139,7 @@ def search_general_api(
                 "abstract": [],
                 "url": [],
             }
+            
             for entry in feed.entries:
                 results["title"].append(entry.title.replace("\n", " ").strip())
                 results["authors"].append(
@@ -142,7 +149,9 @@ def search_general_api(
                 results["url"].append(entry.link)
                 subjects = ", ".join(tag.term for tag in entry.tags)
                 results["subjects"].append(subjects)
+            
             return pd.DataFrame(results)
+        
         except requests.exceptions.RequestException:
             return pd.DataFrame()
 
@@ -166,9 +175,11 @@ def scrape_daily_papers(categories=None, keywords=None, authors=None, max_papers
             soup = BeautifulSoup(response.content, "html.parser")
             found_papers = []
             articles_dl = soup.find("dl", id="articles")
+            
             if not articles_dl:
                 return pd.DataFrame()
             parsing_state = None
+            
             for tag in articles_dl.children:
                 if tag.name == "h3":
                     tag_text = tag.get_text()
@@ -180,21 +191,26 @@ def scrape_daily_papers(categories=None, keywords=None, authors=None, max_papers
                         break
                 if (parsing_state in ["new", "cross"]) and (tag.name == "dt"):
                     dd_tag = tag.find_next_sibling("dd")
+                    
                     if not dd_tag:
                         continue
+                    
                     title_div = dd_tag.find("div", class_="list-title")
                     authors_div = dd_tag.find("div", class_="list-authors")
                     subjects_div = dd_tag.find("div", class_="list-subjects")
                     abstract_p = dd_tag.find("p", class_="mathjax")
                     arxiv_id_link = tag.find("a", title="Abstract")
+                    
                     if not all([title_div, authors_div, subjects_div, arxiv_id_link]):
                         continue
+                    
                     paper_title = title_div.text.replace("Title:", "").strip()
                     paper_authors = authors_div.text.replace("Authors:", "").strip()
                     paper_subjects_str = subjects_div.text.replace(
                         "Subjects:", ""
                     ).strip()
                     paper_abstract = abstract_p.text.strip() if abstract_p else ""
+                    
                     if filter_categories and "cs.*" not in filter_categories:
                         paper_subjects = {
                             s.split("(")[-1].replace(")", "").strip().lower()
@@ -202,6 +218,7 @@ def scrape_daily_papers(categories=None, keywords=None, authors=None, max_papers
                         }
                         if not filter_categories.intersection(paper_subjects):
                             continue
+                    
                     text_to_search = paper_title + " " + paper_abstract
                     if filter_keywords:
                         keyword_pattern = (
@@ -213,6 +230,7 @@ def scrape_daily_papers(categories=None, keywords=None, authors=None, max_papers
                             keyword_pattern, text_to_search, re.IGNORECASE
                         ):
                             continue
+                    
                     if filter_authors and not all(
                         au in paper_authors.lower() for au in filter_authors
                     ):
@@ -226,10 +244,13 @@ def scrape_daily_papers(categories=None, keywords=None, authors=None, max_papers
                         "url": f"http://arxiv.org/abs/{arxiv_id}",
                     }
                     found_papers.append(paper_data)
+            
             if not found_papers:
                 return pd.DataFrame()
+            
             if filter_keywords:
                 title_weight = 3.0
+                
                 for paper in found_papers:
                     keyword_pattern = (
                         r"\b("
@@ -245,7 +266,9 @@ def scrape_daily_papers(categories=None, keywords=None, authors=None, max_papers
                     score = (title_matches * title_weight) + abstract_matches
                     paper["relevance_score"] = score
                 found_papers.sort(key=lambda p: p["relevance_score"], reverse=True)
+            
             return pd.DataFrame(found_papers[:max_papers])
+        
         except Exception:
             return pd.DataFrame()
 
